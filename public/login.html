@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تسجيل الدخول — ERP مقاولات</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #1a2744; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .card { background: white; padding: 40px; border-radius: 16px; width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+  h2 { text-align: center; color: #1a2744; margin-bottom: 8px; font-size: 22px; }
+  p { text-align: center; color: #666; margin-bottom: 28px; font-size: 13px; }
+  label { display: block; margin-bottom: 6px; color: #444; font-size: 14px; font-weight: 600; }
+  input { width: 100%; padding: 11px 14px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 18px; outline: none; transition: border-color 0.2s; }
+  input:focus { border-color: #1a2744; }
+  button { width: 100%; padding: 13px; background: #1a2744; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  button:hover { background: #243460; }
+  .error { color: red; text-align: center; margin-top: 12px; font-size: 13px; display: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>🏗️ ERP مقاولات</h2>
+  <p>نظام إدارة الموارد المتكامل</p>
+  <label>اسم المستخدم</label>
+  <input type="text" id="username" placeholder="admin">
+  <label>كلمة المرور</label>
+  <input type="password" id="password" placeholder="••••••••">
+  <button onclick="login()">دخول</button>
+  <div class="error" id="err"></div>
+</div>
+<script>
+async function login() {
+  const r = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ username: document.getElementById('username').value, password: document.getElementById('password').value })
+  });
+  const d = await r.json();
+  if (d.success) window.location.href = '/';
+  else { document.getElementById('err').style.display='block'; document.getElementById('err').textContent = d.message; }
+}
+document.addEventListener('keypress', e => { if(e.key==='Enter') login(); });
+</script>
+</body>
+</html>

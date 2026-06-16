@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>الموارد البشرية</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',Tahoma,sans-serif; background:#f0f2f5; color:#222; }
+  .navbar { background:#1a2744; color:white; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; }
+  .navbar h1 { font-size:18px; }
+  .navbar a { color:#adb5d6; text-decoration:none; font-size:13px; }
+  .navbar a:hover { color:white; }
+  .tabs { display:flex; gap:4px; padding:16px 24px 0; background:white; border-bottom:2px solid #e5e7eb; }
+  .tab { padding:10px 20px; cursor:pointer; border-radius:8px 8px 0 0; font-size:14px; color:#555; font-weight:600; border:none; background:none; }
+  .tab.active { background:#1a2744; color:white; }
+  .tab:hover:not(.active) { background:#f0f2f5; }
+  .section { display:none; padding:24px; }
+  .section.active { display:block; }
+  .toolbar { display:flex; gap:10px; margin-bottom:16px; align-items:center; flex-wrap:wrap; }
+  .btn { padding:9px 18px; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; }
+  .btn-primary { background:#1a2744; color:white; }
+  .btn-success { background:#16a34a; color:white; }
+  .btn-warning { background:#d97706; color:white; }
+  .btn-danger { background:#dc2626; color:white; }
+  .btn:hover { opacity:0.88; }
+  input, select, textarea { padding:9px 12px; border:1.5px solid #d1d5db; border-radius:8px; font-size:13px; outline:none; font-family:inherit; }
+  input:focus, select:focus { border-color:#1a2744; }
+  table { width:100%; border-collapse:collapse; background:white; border-radius:12px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+  th { background:#1a2744; color:white; padding:12px; text-align:right; font-size:13px; }
+  td { padding:11px 12px; border-bottom:1px solid #f0f2f5; font-size:13px; }
+  tr:hover td { background:#f8fafc; }
+  .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+  .badge-green { background:#dcfce7; color:#166534; }
+  .badge-red { background:#fee2e2; color:#991b1b; }
+  .badge-yellow { background:#fef9c3; color:#854d0e; }
+  .badge-blue { background:#dbeafe; color:#1e40af; }
+  .modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
+  .modal.open { display:flex; }
+  .modal-box { background:white; border-radius:16px; padding:28px; width:560px; max-height:85vh; overflow-y:auto; }
+  .modal-box h3 { margin-bottom:20px; color:#1a2744; font-size:17px; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .form-group { display:flex; flex-direction:column; gap:5px; }
+  .form-group label { font-size:12px; font-weight:700; color:#555; }
+  .form-group.full { grid-column:1/-1; }
+  .modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
+  .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+  .stat-card { background:white; border-radius:12px; padding:20px; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+  .stat-card .num { font-size:28px; font-weight:700; color:#1a2744; }
+  .stat-card .lbl { font-size:12px; color:#888; margin-top:4px; }
+</style>
+</head>
+<body>
+<div class="navbar">
+  <h1>🏗️ ERP مقاولات — الموارد البشرية</h1>
+  <div style="display:flex;gap:20px">
+    <a href="/">الرئيسية</a>
+    <a href="/api/auth/logout">خروج</a>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="showTab('employees')">👥 الموظفون</button>
+  <button class="tab" onclick="showTab('attendance')">📋 الحضور والغياب</button>
+  <button class="tab" onclick="showTab('leaves')">🏖️ الإجازات</button>
+  <button class="tab" onclick="showTab('payroll')">💰 الرواتب</button>
+  <button class="tab" onclick="showTab('rewards')">⭐ مكافآت وعقوبات</button>
+</div>
+
+<!-- ===== الموظفون ===== -->
+<div class="section active" id="sec-employees">
+  <div class="stat-grid" id="stats"></div>
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="openModal('emp')">+ إضافة موظف</button>
+    <input type="text" id="search-emp" placeholder="بحث بالاسم أو الكود..." oninput="filterEmployees()" style="width:220px">
+  </div>
+  <table>
+    <thead><tr><th>الكود</th><th>الاسم</th><th>القسم</th><th>الوظيفة</th><th>الراتب</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+    <tbody id="emp-tbody"></tbody>
+  </table>
+</div>
+
+<!-- ===== الحضور ===== -->
+<div class="section" id="sec-attendance">
+  <div class="toolbar">
+    <label>تاريخ: <input type="date" id="att-date" value="" onchange="loadAttendance()"></label>
+    <button class="btn btn-primary" onclick="openModal('att')">+ تسجيل حضور</button>
+  </div>
+  <table>
+    <thead><tr><th>الكود</th><th>الاسم</th><th>دخول</th><th>خروج</th><th>الحالة</th><th>ملاحظات</th></tr></thead>
+    <tbody id="att-tbody"></tbody>
+  </table>
+</div>
+
+<!-- ===== الإجازات ===== -->
+<div class="section" id="sec-leaves">
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="openModal('leave')">+ طلب إجازة</button>
+  </div>
+  <table>
+    <thead><tr><th>الموظف</th><th>نوع الإجازة</th><th>من</th><th>إلى</th><th>الأيام</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+    <tbody id="leave-tbody"></tbody>
+  </table>
+</div>
+
+<!-- ===== الرواتب ===== -->
+<div class="section" id="sec-payroll">
+  <div class="toolbar">
+    <label>الشهر: <input type="month" id="pay-month"></label>
+    <button class="btn btn-success" onclick="generatePayroll()">⚙️ توليد رواتب الشهر</button>
+  </div>
+  <table>
+    <thead><tr><th>الموظف</th><th>الراتب الأساسي</th><th>خصم غياب</th><th>مكافآت</th><th>خصومات</th><th>الصافي</th><th>الحالة</th></tr></thead>
+    <tbody id="pay-tbody"></tbody>
+  </table>
+</div>
+
+<!-- ===== المكافآت والعقوبات ===== -->
+<div class="section" id="sec-rewards">
+  <div class="toolbar">
+    <button class="btn btn-success" onclick="openModal('reward','reward')">+ مكافأة</button>
+    <button class="btn btn-danger" onclick="openModal('reward','penalty')">- عقوبة</button>
+  </div>
+  <table>
+    <thead><tr><th>الموظف</th><th>النوع</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>الشهر</th></tr></thead>
+    <tbody id="reward-tbody"></tbody>
+  </table>
+</div>
+
+<!-- ===== Modals ===== -->
+<!-- موظف -->
+<div class="modal" id="modal-emp">
+  <div class="modal-box">
+    <h3>إضافة موظف جديد</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>كود الموظف</label><input id="e-code" placeholder="EMP-001"></div>
+      <div class="form-group"><label>الاسم الكامل</label><input id="e-name"></div>
+      <div class="form-group"><label>الرقم القومي</label><input id="e-natid"></div>
+      <div class="form-group"><label>تاريخ الميلاد</label><input type="date" id="e-birth"></div>
+      <div class="form-group"><label>الجنس</label><select id="e-gender"><option value="male">ذكر</option><option value="female">أنثى</option></select></div>
+      <div class="form-group"><label>رقم الهاتف</label><input id="e-phone"></div>
+      <div class="form-group"><label>تاريخ التعيين</label><input type="date" id="e-hire"></div>
+      <div class="form-group"><label>القسم</label><select id="e-dept"></select></div>
+      <div class="form-group"><label>الراتب الأساسي</label><input type="number" id="e-salary"></div>
+      <div class="form-group full"><label>العنوان</label><textarea id="e-addr" rows="2"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('emp')" style="background:#f0f2f5">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveEmployee()">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- حضور -->
+<div class="modal" id="modal-att">
+  <div class="modal-box">
+    <h3>تسجيل حضور</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>الموظف</label><select id="a-emp" style="width:100%"></select></div>
+      <div class="form-group"><label>التاريخ</label><input type="date" id="a-date"></div>
+      <div class="form-group"><label>وقت الدخول</label><input type="time" id="a-in"></div>
+      <div class="form-group"><label>وقت الخروج</label><input type="time" id="a-out"></div>
+      <div class="form-group"><label>الحالة</label>
+        <select id="a-status">
+          <option value="present">حاضر</option>
+          <option value="absent">غائب</option>
+          <option value="late">متأخر</option>
+          <option value="half_day">نصف يوم</option>
+          <option value="holiday">إجازة</option>
+        </select>
+      </div>
+      <div class="form-group"><label>ملاحظات</label><input id="a-notes"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('att')" style="background:#f0f2f5">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveAttendance()">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- إجازة -->
+<div class="modal" id="modal-leave">
+  <div class="modal-box">
+    <h3>طلب إجازة</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>الموظف</label><select id="l-emp" style="width:100%"></select></div>
+      <div class="form-group"><label>نوع الإجازة</label>
+        <select id="l-type">
+          <option value="annual">سنوية</option>
+          <option value="sick">مرضية</option>
+          <option value="emergency">طارئة</option>
+          <option value="unpaid">بدون راتب</option>
+        </select>
+      </div>
+      <div class="form-group"><label>من تاريخ</label><input type="date" id="l-from" onchange="calcDays()"></div>
+      <div class="form-group"><label>إلى تاريخ</label><input type="date" id="l-to" onchange="calcDays()"></div>
+      <div class="form-group"><label>عدد الأيام</label><input type="number" id="l-days" readonly></div>
+      <div class="form-group full"><label>السبب</label><textarea id="l-reason" rows="2"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('leave')" style="background:#f0f2f5">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveLeave()">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- مكافأة/عقوبة -->
+<div class="modal" id="modal-reward">
+  <div class="modal-box">
+    <h3 id="reward-title">إضافة مكافأة</h3>
+    <input type="hidden" id="r-type">
+    <div class="form-grid">
+      <div class="form-group"><label>الموظف</label><select id="r-emp" style="width:100%"></select></div>
+      <div class="form-group"><label>المبلغ</label><input type="number" id="r-amount"></div>
+      <div class="form-group"><label>تاريخ</label><input type="date" id="r-date"></div>
+      <div class="form-group"><label>الشهر المطبق</label><input type="month" id="r-month"></div>
+      <div class="form-group full"><label>السبب</label><textarea id="r-reason" rows="2"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('reward')" style="background:#f0f2f5">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveReward()">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let employees = [], departments = [];
+const today = new Date().toISOString().split('T')[0];
+
+// تحميل البيانات الأساسية
+async function loadBase() {
+  employees = await fetch('/api/hr/employees').then(r=>r.json());
+  departments = await fetch('/api/hr/departments').then(r=>r.json());
+  renderEmployees();
+  loadStats();
+  fillSelects();
+}
+
+function fillSelects() {
+  const opts = employees.map(e=>`<option value="${e.id}">${e.full_name}</option>`).join('');
+  ['a-emp','l-emp','r-emp'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
+  document.getElementById('e-dept').innerHTML = departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+}
+
+function loadStats() {
+  const total = employees.length;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card"><div class="num">${total}</div><div class="lbl">إجمالي الموظفين</div></div>
+    <div class="stat-card"><div class="num" style="color:#16a34a">${employees.filter(e=>e.status==='active').length}</div><div class="lbl">موظف نشط</div></div>
+    <div class="stat-card"><div class="num" style="color:#d97706">${departments.length}</div><div class="lbl">قسم</div></div>
+    <div class="stat-card"><div class="num" style="color:#7c3aed">${employees.reduce((s,e)=>s+parseFloat(e.basic_salary||0),0).toLocaleString('ar-EG')}</div><div class="lbl">إجمالي الرواتب</div></div>
+  `;
+}
+
+function renderEmployees(data) {
+  const list = data || employees;
+  document.getElementById('emp-tbody').innerHTML = list.map(e=>`
+    <tr>
+      <td>${e.emp_code}</td>
+      <td><strong>${e.full_name}</strong></td>
+      <td>${e.dept_name||'—'}</td>
+      <td>${e.job_title_name||'—'}</td>
+      <td>${parseFloat(e.basic_salary||0).toLocaleString('ar-EG')} ج.م</td>
+      <td><span class="badge ${e.status==='active'?'badge-green':'badge-red'}">${e.status==='active'?'نشط':'غير نشط'}</span></td>
+      <td><button class="btn btn-warning" style="padding:5px 10px;font-size:11px" onclick="editEmp(${e.id})">تعديل</button></td>
+    </tr>
+  `).join('');
+}
+
+function filterEmployees() {
+  const q = document.getElementById('search-emp').value.toLowerCase();
+  renderEmployees(employees.filter(e=>e.full_name.toLowerCase().includes(q)||e.emp_code.toLowerCase().includes(q)));
+}
+
+// الحضور
+async function loadAttendance() {
+  const date = document.getElementById('att-date').value || today;
+  const data = await fetch(`/api/hr/attendance?date=${date}`).then(r=>r.json());
+  const statusMap = { present:'حاضر', absent:'غائب', late:'متأخر', half_day:'نصف يوم', holiday:'إجازة' };
+  const badgeMap = { present:'badge-green', absent:'badge-red', late:'badge-yellow', half_day:'badge-blue', holiday:'badge-blue' };
+  document.getElementById('att-tbody').innerHTML = data.map(a=>`
+    <tr><td>${a.emp_code}</td><td>${a.full_name}</td><td>${a.check_in||'—'}</td><td>${a.check_out||'—'}</td>
+    <td><span class="badge ${badgeMap[a.status]}">${statusMap[a.status]}</span></td><td>${a.notes||''}</td></tr>
+  `).join('');
+}
+
+// الإجازات
+async function loadLeaves() {
+  const data = await fetch('/api/hr/leaves').then(r=>r.json());
+  const typeMap = { annual:'سنوية', sick:'مرضية', emergency:'طارئة', unpaid:'بدون راتب' };
+  const statusMap = { pending:'قيد الانتظار', approved:'معتمدة', rejected:'مرفوضة' };
+  const badgeMap = { pending:'badge-yellow', approved:'badge-green', rejected:'badge-red' };
+  document.getElementById('leave-tbody').innerHTML = data.map(l=>`
+    <tr><td>${l.full_name}</td><td>${typeMap[l.leave_type]||l.leave_type}</td>
+    <td>${l.start_date}</td><td>${l.end_date}</td><td>${l.days_count}</td>
+    <td><span class="badge ${badgeMap[l.status]}">${statusMap[l.status]}</span></td>
+    <td>${l.status==='pending'?`<button class="btn btn-success" style="padding:4px 8px;font-size:11px" onclick="approveLeave(${l.id},'approved')">اعتماد</button> <button class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="approveLeave(${l.id},'rejected')">رفض</button>`:'—'}</td></tr>
+  `).join('');
+}
+
+// الرواتب
+async function loadPayroll() {
+  const month = document.getElementById('pay-month').value;
+  if (!month) return;
+  const data = await fetch(`/api/hr/payroll?month=${month}`).then(r=>r.json());
+  document.getElementById('pay-tbody').innerHTML = data.map(p=>`
+    <tr><td>${p.full_name}</td>
+    <td>${parseFloat(p.basic_salary).toLocaleString('ar-EG')}</td>
+    <td style="color:red">-${parseFloat(p.absence_deduction||0).toLocaleString('ar-EG')}</td>
+    <td style="color:green">+${parseFloat(p.allowances||0).toLocaleString('ar-EG')}</td>
+    <td style="color:red">-${parseFloat(p.deductions||0).toLocaleString('ar-EG')}</td>
+    <td><strong>${parseFloat(p.net_salary).toLocaleString('ar-EG')} ج.م</strong></td>
+    <td><span class="badge ${p.status==='paid'?'badge-green':'badge-yellow'}">${p.status==='paid'?'مدفوع':'معلق'}</span></td></tr>
+  `).join('');
+}
+
+async function generatePayroll() {
+  const month = document.getElementById('pay-month').value;
+  if (!month) return alert('اختر الشهر أولاً');
+  if (!confirm(`توليد رواتب شهر ${month}؟`)) return;
+  await fetch('/api/hr/payroll/generate', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({month}) });
+  loadPayroll();
+  alert('✅ تم توليد الرواتب بنجاح');
+}
+
+// المكافآت
+async function loadRewards() {
+  const data = await fetch('/api/hr/rewards').then(r=>r.json());
+  document.getElementById('reward-tbody').innerHTML = data.map(r=>`
+    <tr><td>${r.full_name}</td>
+    <td><span class="badge ${r.type==='reward'?'badge-green':'badge-red'}">${r.type==='reward'?'مكافأة':'عقوبة'}</span></td>
+    <td>${parseFloat(r.amount).toLocaleString('ar-EG')} ج.م</td>
+    <td>${r.reason||'—'}</td><td>${r.issue_date}</td><td>${r.applied_month||'—'}</td></tr>
+  `).join('');
+}
+
+// حفظ الموظف
+async function saveEmployee() {
+  const body = { emp_code:v('e-code'), full_name:v('e-name'), national_id:v('e-natid'), birth_date:v('e-birth'), gender:v('e-gender'), phone:v('e-phone'), address:v('e-addr'), hire_date:v('e-hire'), department_id:v('e-dept'), basic_salary:v('e-salary') };
+  await fetch('/api/hr/employees', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  closeModal('emp'); loadBase(); alert('✅ تم حفظ الموظف');
+}
+
+async function saveAttendance() {
+  const body = { employee_id:v('a-emp'), att_date:v('a-date'), check_in:v('a-in'), check_out:v('a-out'), status:v('a-status'), notes:v('a-notes') };
+  await fetch('/api/hr/attendance', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  closeModal('att'); loadAttendance(); alert('✅ تم حفظ الحضور');
+}
+
+function calcDays() {
+  const f = document.getElementById('l-from').value, t = document.getElementById('l-to').value;
+  if (f && t) document.getElementById('l-days').value = Math.round((new Date(t)-new Date(f))/(1000*60*60*24))+1;
+}
+
+async function saveLeave() {
+  const body = { employee_id:v('l-emp'), leave_type:v('l-type'), start_date:v('l-from'), end_date:v('l-to'), days_count:v('l-days'), reason:v('l-reason') };
+  await fetch('/api/hr/leaves', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  closeModal('leave'); loadLeaves(); alert('✅ تم تسجيل طلب الإجازة');
+}
+
+async function approveLeave(id, status) {
+  await fetch(`/api/hr/leaves/${id}/approve`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status}) });
+  loadLeaves();
+}
+
+async function saveReward() {
+  const body = { employee_id:v('r-emp'), type:v('r-type'), amount:v('r-amount'), reason:v('r-reason'), issue_date:v('r-date'), applied_month:v('r-month') };
+  await fetch('/api/hr/rewards', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  closeModal('reward'); loadRewards();
+}
+
+// Tabs & Modals
+function showTab(name) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  event.target.classList.add('active');
+  if(name==='attendance') { document.getElementById('att-date').value=today; loadAttendance(); }
+  if(name==='leaves') loadLeaves();
+  if(name==='payroll') { document.getElementById('pay-month').value=today.slice(0,7); loadPayroll(); }
+  if(name==='rewards') loadRewards();
+}
+
+function openModal(name, type) {
+  document.getElementById('modal-'+name).classList.add('open');
+  if(name==='reward') { document.getElementById('r-type').value=type; document.getElementById('reward-title').textContent = type==='reward'?'إضافة مكافأة':'إضافة عقوبة'; document.getElementById('r-date').value=today; }
+  if(name==='att') document.getElementById('a-date').value=today;
+}
+
+function closeModal(name) { document.getElementById('modal-'+name).classList.remove('open'); }
+function v(id) { return document.getElementById(id)?.value; }
+
+document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
+
+loadBase();
+</script>
+</body>
+</html>
